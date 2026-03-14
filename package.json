@@ -1,0 +1,23 @@
+{
+  "name": "game-of-life",
+  "version": "1.0.0",
+  "description": "Conway's Game of Life cellular automaton as an interactive HTML5 game",
+  "main": "index.html",
+  "scripts": {
+    "build": "echo 'No build needed - static HTML file'",
+    "start": "npx serve -s . -l 3000",
+    "dev": "npx serve -s . -l 3000"
+  },
+  "dependencies": {
+    "serve": "^14.2.1"
+  },
+  "keywords": [
+    "game-of-life",
+    "cellular-automaton",
+    "html5",
+    "canvas",
+    "javascript"
+  ],
+  "author": "",
+  "license": "MIT"
+}

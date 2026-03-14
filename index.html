@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conway's Game of Life</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&family=Bangers&family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --neon-yellow: #EEFF00;
+            --electric-pink: #FF2D7C;
+            --cyber-blue: #00F0FF;
+            --deep-purple: #1a0a2e;
+            --darker-purple: #0d0518;
+            --cream: #FFF8E7;
+            --toxic-green: #39FF14;
+            --orange-pop: #FF6B35;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--darker-purple);
+            color: var(--cream);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .game-container {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .title {
+            font-family: 'Bangers', cursive;
+            font-size: clamp(2rem, 6vw, 4rem);
+            color: var(--neon-yellow);
+            text-shadow: 0 0 20px var(--neon-yellow), 0 0 40px var(--neon-yellow);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, var(--electric-pink), var(--cyber-blue));
+            border: none;
+            color: var(--cream);
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-family: 'Press Start 2P', monospace;
+            font-size: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 15px rgba(255, 45, 124, 0.5);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 25px rgba(255, 45, 124, 0.8);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn.playing {
+            background: linear-gradient(45deg, var(--toxic-green), var(--cyber-blue));
+            box-shadow: 0 0 15px rgba(57, 255, 20, 0.5);
+        }
+
+        .speed-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 12px;
+        }
+
+        .speed-slider {
+            appearance: none;
+            width: 100px;
+            height: 5px;
+            background: var(--deep-purple);
+            border-radius: 3px;
+            outline: none;
+        }
+
+        .speed-slider::-webkit-slider-thumb {
+            appearance: none;
+            width: 15px;
+            height: 15px;
+            background: var(--electric-pink);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 10px var(--electric-pink);
+        }
+
+        .speed-slider::-moz-range-thumb {
+            width: 15px;
+            height: 15px;
+            background: var(--electric-pink);
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 0 10px var(--electric-pink);
+        }
+
+        .generation-counter {
+            font-family: 'Press Start 2P', monospace;
+            font-size: 14px;
+            color: var(--neon-yellow);
+            text-shadow: 0 0 10px var(--neon-yellow);
+        }
+
+        #gameCanvas {
+            border: 2px solid var(--cyber-blue);
+            border-radius: 10px;
+            box-shadow: 0 0 30px rgba(0, 240, 255, 0.5);
+            cursor: crosshair;
+            background: var(--deep-purple);
+        }
+
+        .instructions {
+            text-align: center;
+            font-size: 12px;
+            max-width: 600px;
+            margin-top: 20px;
+            line-height: 1.6;
+            color: var(--cream);
+            opacity: 0.8;
+        }
+
+        .patterns {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .pattern-btn {
+            background: linear-gradient(45deg, var(--orange-pop), var(--toxic-green));
+            border: none;
+            color: var(--cream);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-family: 'Outfit', sans-serif;
+            font-size: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 10px rgba(255, 107, 53, 0.3);
+        }
+
+        .pattern-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 0 20px rgba(255, 107, 53, 0.6);
+        }
+
+        @media (max-width: 768px) {
+            .controls {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .patterns {
+                max-width: 90vw;
+            }
+            
+            #gameCanvas {
+                max-width: 95vw;
+                max-height: 50vh;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1 class="title">GAME OF LIFE</h1>
+        
+        <div class="controls">
+            <button id="playPauseBtn" class="btn">PLAY</button>
+            <button id="stepBtn" class="btn">STEP</button>
+            <button id="clearBtn" class="btn">CLEAR</button>
+            <button id="randomBtn" class="btn">RANDOM</button>
+            
+            <div class="speed-control">
+                <label>SPEED:</label>
+                <input type="range" id="speedSlider" class="speed-slider" min="1" max="60" value="10">
+                <span id="speedValue">10</span>
+            </div>
+        </div>
+        
+        <div class="generation-counter">
+            GENERATION: <span id="generationCount">0</span>
+        </div>
+        
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        
+        <div class="patterns">
+            <button class="pattern-btn" data-pattern="glider">Glider</button>
+            <button class="pattern-btn" data-pattern="blinker">Blinker</button>
+            <button class="pattern-btn" data-pattern="toad">Toad</button>
+            <button class="pattern-btn" data-pattern="beacon">Beacon</button>
+            <button class="pattern-btn" data-pattern="pulsar">Pulsar</button>
+            <button class="pattern-btn" data-pattern="gosper">Gosper Gun</button>
+        </div>
+        
+        <div class="instructions">
+            <p><strong>Click or drag</strong> to toggle cells • <strong>PLAY</strong> to start simulation • <strong>STEP</strong> for manual progression</p>
+            <p>Conway's Game of Life: Cells live, die, and reproduce based on their neighbors</p>
+        </div>
+    </div>
+
+    <script>
+        // Game constants
+        const CELL_SIZE = 8;
+        const GRID_COLOR = '#2a1f3d';
+        const DEAD_COLOR = '#1a0a2e';
+        const ALIVE_COLOR = '#39FF14';
+        const HOVER_COLOR = '#FF2D7C';
+        
+        // Game state
+        const gameState = {
+            grid: [],
+            nextGrid: [],
+            cols: 0,
+            rows: 0,
+            playing: false,
+            generation: 0,
+            speed: 10,
+            lastUpdate: 0,
+            mouseDown: false,
+            hoverCell: { x: -1, y: -1 }
+        };
+        
+        // Get DOM elements
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const playPauseBtn = document.getElementById('playPauseBtn');
+        const stepBtn = document.getElementById('stepBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const randomBtn = document.getElementById('randomBtn');
+        const speedSlider = document.getElementById('speedSlider');
+        const speedValue = document.getElementById('speedValue');
+        const generationCount = document.getElementById('generationCount');
+        const patternBtns = document.querySelectorAll('.pattern-btn');
+        
+        // Initialize game
+        function init() {
+            // Adjust canvas size for mobile
+            if (window.innerWidth < 768) {
+                canvas.width = Math.min(600, window.innerWidth * 0.95);
+                canvas.height = Math.min(450, window.innerHeight * 0.5);
+            }
+            
+            gameState.cols = Math.floor(canvas.width / CELL_SIZE);
+            gameState.rows = Math.floor(canvas.height / CELL_SIZE);
+            
+            // Adjust canvas to fit exact grid
+            canvas.width = gameState.cols * CELL_SIZE;
+            canvas.height = gameState.rows * CELL_SIZE;
+            
+            // Initialize grids
+            gameState.grid = createGrid();
+            gameState.nextGrid = createGrid();
+            
+            setupEventListeners();
+            gameLoop();
+        }
+        
+        function createGrid() {
+            const grid = [];
+            for (let y = 0; y < gameState.rows; y++) {
+                grid[y] = [];
+                for (let x = 0; x < gameState.cols; x++) {
+                    grid[y][x] = false;
+                }
+            }
+            return grid;
+        }
+        
+        function setupEventListeners() {
+            // Play/Pause button
+            playPauseBtn.addEventListener('click', () => {
+                gameState.playing = !gameState.playing;
+                playPauseBtn.textContent = gameState.playing ? 'PAUSE' : 'PLAY';
+                playPauseBtn.classList.toggle('playing', gameState.playing);
+            });
+            
+            // Step button
+            stepBtn.addEventListener('click', () => {
+                if (!gameState.playing) {
+                    updateGame();
+                }
+            });
+            
+            // Clear button
+            clearBtn.addEventListener('click', () => {
+                gameState.grid = createGrid();
+                gameState.generation = 0;
+                updateGenerationDisplay();
+            });
+            
+            // Random button
+            randomBtn.addEventListener('click', () => {
+                randomizeGrid();
+            });
+            
+            // Speed slider
+            speedSlider.addEventListener('input', (e) => {
+                gameState.speed = parseInt(e.target.value);
+                speedValue.textContent = gameState.speed;
+            });
+            
+            // Canvas mouse events
+            canvas.addEventListener('mousedown', handleMouseDown);
+            canvas.addEventListener('mousemove', handleMouseMove);
+            canvas.addEventListener('mouseup', handleMouseUp);
+            canvas.addEventListener('mouseleave', handleMouseLeave);
+            
+            // Touch events for mobile
+            canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+            canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+            canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
+            
+            // Pattern buttons
+            patternBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const pattern = btn.dataset.pattern;
+                    placePattern(pattern);
+                });
+            });
+        }
+        
+        function handleMouseDown(e) {
+            gameState.mouseDown = true;
+            const rect = canvas.getBoundingClientRect();
+            const x = Math.floor((e.clientX - rect.left) / CELL_SIZE);
+            const y = Math.floor((e.clientY - rect.top) / CELL_SIZE);
+            toggleCell(x, y);
+        }
+        
+        function handleMouseMove(e) {
+            const rect = canvas.getBoundingClientRect();
+            const x = Math.floor((e.clientX - rect.left) / CELL_SIZE);
+            const y = Math.floor((e.clientY - rect.top) / CELL_SIZE);
+            
+            gameState.hoverCell.x = x;
+            gameState.hoverCell.y = y;
+            
+            if (gameState.mouseDown) {
+                toggleCell(x, y);
+            }
+        }
+        
+        function handleMouseUp() {
+            gameState.mouseDown = false;
+        }
+        
+        function handleMouseLeave() {
+            gameState.mouseDown = false;
+            gameState.hoverCell.x = -1;
+            gameState.hoverCell.y = -1;
+        }
+        
+        function handleTouchStart(e) {
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const touch = e.touches[0];
+            const x = Math.floor((touch.clientX - rect.left) / CELL_SIZE);
+            const y = Math.floor((touch.clientY - rect.top) / CELL_SIZE);
+            toggleCell(x, y);
+        }
+        
+        function handleTouchMove(e) {
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const touch = e.touches[0];
+            const x = Math.floor((touch.clientX - rect.left) / CELL_SIZE);
+            const y = Math.floor((touch.clientY - rect.top) / CELL_SIZE);
+            toggleCell(x, y);
+        }
+        
+        function handleTouchEnd(e) {
+            e.preventDefault();
+        }
+        
+        function toggleCell(x, y) {
+            if (x >= 0 && x < gameState.cols && y >= 0 && y < gameState.rows) {
+                gameState.grid[y][x] = !gameState.grid[y][x];
+            }
+        }
+        
+        function randomizeGrid() {
+            for (let y = 0; y < gameState.rows; y++) {
+                for (let x = 0; x < gameState.cols; x++) {
+                    gameState.grid[y][x] = Math.random() < 0.25;
+                }
+            }
+            gameState.generation = 0;
+            updateGenerationDisplay();
+        }
+        
+        function updateGame() {
+            // Copy current grid to next grid
+            for (let y = 0; y < gameState.rows; y++) {
+                for (let x = 0; x < gameState.cols; x++) {
+                    const neighbors = countNeighbors(x, y);
+                    const isAlive = gameState.grid[y][x];
+                    
+                    // Conway's Game of Life rules
+                    if (isAlive) {
+                        // Live cells with 2 or 3 neighbors survive
+                        gameState.nextGrid[y][x] = neighbors === 2 || neighbors === 3;
+                    } else {
+                        // Dead cells with exactly 3 neighbors become alive
+                        gameState.nextGrid[y][x] = neighbors === 3;
+                    }
+                }
+            }
+            
+            // Swap grids
+            const temp = gameState.grid;
+            gameState.grid = gameState.nextGrid;
+            gameState.nextGrid = temp;
+            
+            gameState.generation++;
+            updateGenerationDisplay();
+        }
+        
+        function countNeighbors(x, y) {
+            let count = 0;
+            for (let dy = -1; dy <= 1; dy++) {
+                for (let dx = -1; dx <= 1; dx++) {
+                    if (dx === 0 && dy === 0) continue;
+                    
+                    const nx = x + dx;
+                    const ny = y + dy;
+                    
+                    if (nx >= 0 && nx < gameState.cols && ny >= 0 && ny < gameState.rows) {
+                        if (gameState.grid[ny][nx]) count++;
+                    }
+                }
+            }
+            return count;
+        }
+        
+        function updateGenerationDisplay() {
+            generationCount.textContent = gameState.generation;
+        }
+        
+        function render() {
+            // Clear canvas
+            ctx.fillStyle = DEAD_COLOR;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw grid lines
+            ctx.strokeStyle = GRID_COLOR;
+            ctx.lineWidth = 1;
+            
+            // Vertical lines
+            for (let x = 0; x <= gameState.cols; x++) {
+                ctx.beginPath();
+                ctx.moveTo(x * CELL_SIZE, 0);
+                ctx.lineTo(x * CELL_SIZE, canvas.height);
+                ctx.stroke();
+            }
+            
+            // Horizontal lines
+            for (let y = 0; y <= gameState.rows; y++) {
+                ctx.beginPath();
+                ctx.moveTo(0, y * CELL_SIZE);
+                ctx.lineTo(canvas.width, y * CELL_SIZE);
+                ctx.stroke();
+            }
+            
+            // Draw cells
+            for (let y = 0; y < gameState.rows; y++) {
+                for (let x = 0; x < gameState.cols; x++) {
+                    if (gameState.grid[y][x]) {
+                        ctx.fillStyle = ALIVE_COLOR;
+                        ctx.shadowColor = ALIVE_COLOR;
+                        ctx.shadowBlur = 10;
+                        ctx.fillRect(x * CELL_SIZE + 1, y * CELL_SIZE + 1, CELL_SIZE - 2, CELL_SIZE - 2);
+                        ctx.shadowBlur = 0;
+                    }
+                }
+            }
+            
+            // Draw hover effect
+            if (gameState.hoverCell.x >= 0 && gameState.hoverCell.y >= 0 && !gameState.playing) {
+                const x = gameState.hoverCell.x;
+                const y = gameState.hoverCell.y;
+                if (x < gameState.cols && y < gameState.rows) {
+                    ctx.fillStyle = HOVER_COLOR;
+                    ctx.globalAlpha = 0.5;
+                    ctx.fillRect(x * CELL_SIZE + 1, y * CELL_SIZE + 1, CELL_SIZE - 2, CELL_SIZE - 2);
+                    ctx.globalAlpha = 1.0;
+                }
+            }
+        }
+        
+        function gameLoop(timestamp) {
+            if (gameState.playing && timestamp - gameState.lastUpdate > (1000 / gameState.speed)) {
+                updateGame();
+                gameState.lastUpdate = timestamp;
+            }
+            
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+        
+        function placePattern(patternName) {
+            const centerX = Math.floor(gameState.cols / 2);
+            const centerY = Math.floor(gameState.rows / 2);
+            
+            // Clear grid first
+            gameState.grid = createGrid();
+            gameState.generation = 0;
+            updateGenerationDisplay();
+            
+            const patterns = {
+                glider: [
+                    [0, 1, 0],
+                    [0, 0, 1],
+                    [1, 1, 1]
+                ],
+                blinker: [
+                    [1, 1, 1]
+                ],
+                toad: [
+                    [0, 1, 1, 1],
+                    [1, 1, 1, 0]
+                ],
+                beacon: [
+                    [1, 1, 0, 0],
+                    [1, 1, 0, 0],
+                    [0, 0, 1, 1],
+                    [0, 0, 1, 1]
+                ],
+                pulsar: [
+                    [0,0,1,1,1,0,0,0,1,1,1,0,0],
+                    [0,0,0,0,0,0,0,0,0,0,0,0,0],
+                    [1,0,0,0,0,1,0,1,0,0,0,0,1],
+                    [1,0,0,0,0,1,0,1,0,0,0,0,1],
+                    [1,0,0,0,0,1,0,1,0,0,0,0,1],
+                    [0,0,1,1,1,0,0,0,1,1,1,0,0],
+                    [0,0,0,0,0,0,0,0,0,0,0,0,0],
+                    [0,0,1,1,1,0,0,0,1,1,1,0,0],
+                    [1,0,0,0,0,1,0,1,0,0,0,0,1],
+                    [1,0,0,0,0,1,0,1,0,0,0,0,1],
+                    [1,0,0,0,0,1,0,1,0,0,0,0,1],
+                    [0,0,0,0,0,0,0,0,0,0,0,0,0],
+                    [0,0,1,1,1,0,0,0,1,1,1,0,0]
+                ],
+                gosper: [
+                    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0],
+                    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0],
+                    [0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1],
+                    [0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1],
+                    [1,1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                    [1,1,0,0,0,0,0,0,0,0,1,0,0,0,1,0,1,1,0,0,0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0],
+                    [0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0],
+                    [0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                    [0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+                ]
+            };
+            
+            const pattern = patterns[patternName];
+            if (!pattern) return;
+            
+            const startX = centerX - Math.floor(pattern[0].length / 2);
+            const startY = centerY - Math.floor(pattern.length / 2);
+            
+            for (let y = 0; y < pattern.length; y++) {
+                for (let x = 0; x < pattern[y].length; x++) {
+                    const gridX = startX + x;
+                    const gridY = startY + y;
+                    
+                    if (gridX >= 0 && gridX < gameState.cols && gridY >= 0 && gridY < gameState.rows) {
+                        gameState.grid[gridY][gridX] = pattern[y][x] === 1;
+                    }
+                }
+            }
+        }
+        
+        // Start the game
+        init();
+    </script>
+</body>
+</html>
