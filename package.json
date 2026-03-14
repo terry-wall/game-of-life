@@ -4,12 +4,7 @@
   "description": "Conway's Game of Life cellular automaton as an interactive HTML5 game",
   "main": "index.html",
   "scripts": {
-    "build": "echo 'No build needed - static HTML file'",
-    "start": "npx serve -s . -l 3000 --host 0.0.0.0",
-    "dev": "npx serve -s . -l 3000"
-  },
-  "dependencies": {
-    "serve": "^14.2.1"
+    "start": "open index.html || xdg-open index.html || start index.html"
   },
   "keywords": [
     "game-of-life",
