@@ -5,7 +5,7 @@
   "main": "index.html",
   "scripts": {
     "build": "echo 'No build needed - static HTML file'",
-    "start": "npx serve -s . -l 3000",
+    "start": "npx serve -s . -l 3000 --host 0.0.0.0",
     "dev": "npx serve -s . -l 3000"
   },
   "dependencies": {
